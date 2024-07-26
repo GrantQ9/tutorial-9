@@ -14,3 +14,5 @@ library(tidyverse)
 library(primer.data)
 ```
 
+We seek to use data from all gubernatorial candidates from 1945-2012 who died by 2012 to find out how long political candidates live after elections, with special regard to their sex. 
+
