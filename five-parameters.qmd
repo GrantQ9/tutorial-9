@@ -9,10 +9,49 @@ execute:
 ```{r}
 #| label: setup
 #| message: false
+#| warning: false
 
 library(tidyverse)
 library(primer.data)
+library(tidybayes)
+library(brms)
+library(gtsummary)
 ```
 
-We seek to use data from all gubernatorial candidates from 1945-2012 who died by 2012 to find out how long gubernatorial candidates live after elections, with special regard to their sex. We assume that non-major party candidates are similar to major party candidates due to lacking data on them.
+```{r}
+#| label: model
+#| cache: true
 
+fit_all <- brm(data = governors, formula = lived_after ~ sex*election_age, silent = 2, refresh = 0, seed = 13)
+```
+
+```{r}
+#| label: plot
+ndata = tibble(sex = c("Male", "Female"), 
+       election_age = 50)
+
+fit_all |> add_epred_draws(newdata = ndata) |>
+  ggplot(aes(x = .epred, fill = sex)) + 
+  geom_histogram(aes(y = after_stat(count/sum(count))), 
+    alpha = 0.5, bins = 100, position = "identity") +
+  scale_x_continuous(labels = scales::number_format(accuracy = 1)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(
+    title = "Posterior for Post-Election Lifespan by Gender",
+    subtitle = "Women have a much wider spread of posteriors",
+    x = "Years",
+    y = "Probability",
+    caption = "Data from 'Longevity Returns to Political Office'\nby Barfort, Klemmensen & Larsen")
+```
+
+We seek to use data from all gubernatorial candidates from 1945-2012 who died by 2012 to find out how long gubernatorial candidates live after elections, with special regard to their sex. We assume that non-major party candidates are similar to major party candidates due to lacking data on them. We modeled time alive after the election with Bayesian regression using sex, age before the election, and the interaction of those two. We see that while male candidates do live longer than female candidates, being older at the start of the election is more deleterious for men than women. Male gubernatorial candidates live on average 53 years longer than female candidates of the same age, with a 95% confidence interval of 9.9 to 97 years. This weird result is, at least in magnitude, likely an artifact of our data.
+
+$$ lived\_after_i =  \beta_0 + \beta_1 male_i + \beta_2 c\_election\_age_i + 
+\\ \beta_3 male_i *  c\_election\_age_i + \epsilon_i $$
+
+```{r}
+#| label: parameter_table
+#| warning: false
+
+tbl_regression(fit_all, intercept = TRUE)
+```
